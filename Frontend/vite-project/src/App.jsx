@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from "react";
 import socket from "./Utility.js";
+import Message from "./Components/Message.jsx";
+import SideBar from "./Components/SideBar.jsx";
 
 const App = () => {
   const [CurrentId, setCurrentId] = useState("")
+  const [Join, setJoin] = useState("")
   const [text, settext] = useState("")
+  const [Users, setUsers] = useState([])
   const [UserInfo, setUserInfo] = useState({
     id: "",
     name: "",
@@ -14,8 +18,10 @@ const App = () => {
         id : ""
       }],
   });
-  console.log("UserInfo",UserInfo);
+
+ 
   
+
   useEffect(() => {
       socket.on("connect", () => {
       setUserInfo((prev) => ({
@@ -23,10 +29,11 @@ const App = () => {
         id: socket.id,
       }));
       setCurrentId(socket.id)
+      
     });
 
     socket.on("Welcome", (msg) => {
-      console.log(msg);
+      setJoin(msg)
     });
 
    socket.on("ReceiveMessage" , ({ id, text }) => {
@@ -36,6 +43,10 @@ const App = () => {
   }));
 });
 
+  socket.on("Users", (users)=>{
+    setUsers(users)
+  })
+
 
 
     return () => {
@@ -44,6 +55,16 @@ const App = () => {
       socket.off("ReceiveMessage");
     };
   }, []);
+
+  useEffect(() => {
+  if (!Join) return; 
+
+  const timer = setTimeout(() => {
+    setJoin("");
+  }, 3000);
+
+  return () => clearTimeout(timer); 
+}, [Join]);
 
   const HandleChanges = (key , value)=>{
     setUserInfo((prev)=>({
@@ -58,43 +79,58 @@ const App = () => {
 
     // send to server
     socket.emit("Message", {id: socket.id, text: UserInfo.text});
-    setUserInfo((prev)=> ({...prev , text : ""}))
+    // setUserInfo((prev)=> ({...prev , text : ""}))
 
   };
 
   return (
-    <div>
+    <div className="font-urbanist">
       <div className="bg-red-500 px-3 py-2">
         User Connected with id {UserInfo.id}
       </div>
 
-      <div className="flex">
-        <form onSubmit={SendMessage} className="w-1/2">
-          <input
-            type="text"
-            value={UserInfo.text}
-            onChange={({ target }) => HandleChanges("text", target.value)}
-            className="form-input"
+      <div className="grid grid-cols-6">
+        <div className=" col-span-2 border h-[93vh] ">
+          <SideBar
+            Users={Users.filter((item)=> item!=CurrentId)} 
+            CurrentId={CurrentId}
           />
-          <button type="submit" className="btn-primary">
-            Send
-          </button>
-        </form>
-
-        {/* Messages area */}
-        <div className="border w-1/2 m-2 rounded-lg p-2">
-       
-          {UserInfo.message.map((msg, index) => (
-          <div key={index} className={`p-1 border-b ${msg.id == CurrentId ? "text-red-500":"text-green-500 text-end"}`}>
-              <div className="text-xs flex flex-col">
-                <span>{msg.text}</span>
-              </div>
-            </div>
-          ))}
         </div>
+        <div className=" col-span-4 border ">
+          <Message
+            UserInfo={UserInfo}
+            CurrentId={CurrentId}
+            Join ={Join}
+          />
+          <div>
+            <form onSubmit={SendMessage}   className="flex items-center justify-between  border gap-1 ">
+                <div className="border">
+                  <div  className={`size-10 rounded-full  bg-red-200 border `}></div>
+                </div>
+                <input
+                  type="text"
+                  value={UserInfo.text}
+                  onChange={({ target }) => HandleChanges("text", target.value)}
+                  className="form-input"
+                  />
+                <button type="submit" className="btn-primary p-3  text-lg">
+                  Send
+                </button>
+            </form>
+          </div>
+        </div>
+      
       </div>
     </div>
   );
 };
 
 export default App;
+
+
+
+  // <div className="relative border w-1/2 h-[90vh] m-2 rounded-lg ">
+       
+  //          
+  //           
+  //       </div>
